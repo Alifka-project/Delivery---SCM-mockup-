@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Control tower · SULOai</title>
+  <meta name="description" content="SULOai control tower for shipment visibility, dispatch, and last-mile delivery from the Jebel Ali origin hub.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="icon" href="brand/suloai-mark.png">
+</head>
+<body>
+  <a class="skip" href="#stage">Skip to operations</a>
+  <svg class="grain" aria-hidden="true">
+    <filter id="grain-filter">
+      <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="4" stitchTiles="stitch"/>
+    </filter>
+    <rect width="100%" height="100%" filter="url(#grain-filter)"/>
+  </svg>
+  <p class="sr-only" id="live-region" aria-live="polite"></p>
+  <div class="app">
+    <aside class="rail" aria-label="Primary">
+      <div class="brand">
+        <img class="mark-logo" src="brand/suloai-mark.png" alt="">
+        <div>
+          <strong>SULOai</strong>
+          <em>Control tower</em>
+        </div>
+      </div>
+      <div class="hub">
+        <span>Origin hub</span>
+        <b>Jebel Ali · Dubai</b>
+      </div>
+      <div class="rail-label">Operations</div>
+      <nav class="rail-nav">
+        <span class="glider" aria-hidden="true"></span>
+        <a class="rail-link" href="#dashboard" data-view="dashboard">
+          <span class="idx">01</span>
+          <span class="copy"><b>Control tower</b><small>Network overview</small></span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M4 14V6M10 18V4M16 14V8M22 18V10"/></svg>
+        </a>
+        <a class="rail-link" href="#tracking" data-view="tracking">
+          <span class="idx">02</span>
+          <span class="copy"><b>Shipment tracking</b><small>38 out for delivery</small></span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="6" cy="17" r="2.2"/><circle cx="18" cy="7" r="2.2"/><path d="M8 16c2.5-4 5-8 8-8"/></svg>
+        </a>
+      </nav>
+      <p class="rail-note">Origin hub, linehaul, last mile, and delivery exceptions.</p>
+      <div class="rail-live" id="rail-live"></div>
+      <div class="integrity">
+        <div class="integrity-top"><span>On-time performance</span><b>99.2%</b></div>
+        <div class="meter" aria-hidden="true"><span></span></div>
+      </div>
+      <div class="operator">
+        <span class="avatar" aria-hidden="true">NA</span>
+        <div>
+          <b>N. Al Farsi</b>
+          <small>Operations supervisor</small>
+        </div>
+        <span class="presence" aria-hidden="true"></span>
+      </div>
+      <p class="keys">1 control tower · 2 tracking</p>
+    </aside>
+    <main class="stage" id="stage" tabindex="-1"></main>
+  </div>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script type="module" src="js/app.js?v=12"></script>
+</body>
+</html>
