@@ -30,11 +30,6 @@
           <em>Control tower</em>
         </div>
       </div>
-      <div class="hub">
-        <span>Origin hub</span>
-        <b>Jebel Ali · Dubai</b>
-      </div>
-      <div class="rail-label">Operations</div>
       <nav class="rail-nav">
         <span class="glider" aria-hidden="true"></span>
         <a class="rail-link" href="#dashboard" data-view="dashboard">
@@ -48,11 +43,23 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="6" cy="17" r="2.2"/><circle cx="18" cy="7" r="2.2"/><path d="M8 16c2.5-4 5-8 8-8"/></svg>
         </a>
       </nav>
-      <p class="rail-note">Origin hub, linehaul, last mile, and delivery exceptions.</p>
-      <div class="rail-live" id="rail-live"></div>
-      <div class="integrity">
-        <div class="integrity-top"><span>On-time performance</span><b>99.2%</b></div>
-        <div class="meter" aria-hidden="true"><span></span></div>
+      <div class="rail-spacer"></div>
+      <div class="ai-slot">
+        <section class="ai-panel" id="ai-panel" hidden>
+          <div class="ai-log" id="ai-log">
+            <p class="ai-answer">Ask about live shipments, proof of delivery, or exceptions.</p>
+          </div>
+          <form id="ai-form">
+            <input id="ai-input" type="text" placeholder="Ask SULOai" aria-label="Ask SULOai">
+            <button type="submit" aria-label="Send">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+            </button>
+          </form>
+        </section>
+        <button class="ai-bot" id="ai-bot" type="button" aria-expanded="false" aria-controls="ai-panel">
+          <img src="brand/suloai-mark.png" alt="">
+          <span><b>SULOai</b><small>Ask the tower</small></span>
+        </button>
       </div>
       <div class="operator">
         <span class="avatar" aria-hidden="true">NA</span>
@@ -62,11 +69,10 @@
         </div>
         <span class="presence" aria-hidden="true"></span>
       </div>
-      <p class="keys">1 control tower · 2 tracking</p>
     </aside>
     <main class="stage" id="stage" tabindex="-1"></main>
   </div>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-  <script type="module" src="js/app.js?v=12"></script>
+  <script type="module" src="js/app.js?v=14"></script>
 </body>
 </html>

@@ -87,24 +87,20 @@ function spark(values, color) {
 }
 
 function metric(item) {
+  const raw = String(item.value).replace(/,/g, "");
+  const count = /^-?\d+(\.\d+)?%?$/.test(raw) ? raw.replace("%", "") : "";
+  const suffix = String(item.value).includes("%") ? "%" : "";
   return `<article class="metric ${item.span || ""}">
     <header><span>${esc(item.label)}</span>${item.spark || ""}</header>
-    <strong class="metric-value ${item.tone || ""}">${esc(item.value)}</strong>
+    <strong class="metric-value ${item.tone || ""}"${count ? ` data-count="${count}" data-suffix="${suffix}"` : ""}>${esc(item.value)}</strong>
     <p>${esc(item.note)}</p>
   </article>`;
 }
 
-function head(kicker, title, deck) {
-  return `<header class="stage-head">
-    <div>
-      <p class="kicker">${esc(kicker)}</p>
-      <h1>${esc(title)}</h1>
-      <p class="deck">${esc(deck)}</p>
-    </div>
-    <div class="clock-block">
-      <div class="live"><i></i> Dubai GST</div>
-      <div class="clock js-clock">${clockNow()}</div>
-    </div>
+function head() {
+  return `<header class="stage-head slim">
+    <div class="live"><i></i> Dubai GST</div>
+    <div class="clock js-clock">${clockNow()}</div>
   </header>`;
 }
 
@@ -239,31 +235,98 @@ function ledger() {
   </article>`).join("");
 }
 
+function overviewMarkup() {
+  const recentTotal = network.recent.delivered + network.recent.cancelled + network.recent.rescheduled;
+  return `<section class="plate" id="plate">
+      ${metric({ label: "Total shipments", value: formatNum(network.total), note: "All service levels", spark: spark(sparks.total, "#41b0cc"), tone: "" })}
+      ${metric({ label: "Delivered", value: formatNum(network.delivered), note: `${formatPct(network.delivered, network.total)} delivery completion`, spark: spark(sparks.delivered, "#8ed1c4"), tone: "tone-mint" })}
+      ${metric({ label: "Open shipments", value: formatNum(network.pending), note: `${formatPct(network.pending, network.total)} of volume · ${network.inProgress} out for delivery`, spark: spark(sparks.pending, "#41b0cc"), tone: "tone-gold" })}
+      ${metric({ label: "Cancelled", value: formatNum(network.cancelled), note: `${formatPct(network.cancelled, network.total)} cancellation rate`, spark: spark(sparks.cancelled, "#fd9cc2"), tone: "tone-coral" })}
+      ${metric({ label: "Drivers on duty", value: formatNum(network.activeDrivers), note: `${network.totalDrivers} on roster`, spark: spark(sparks.drivers, "#69c2dc"), span: "secondary" })}
+      ${metric({ label: "Position updates", value: formatNum(network.recentLocations), note: "GPS pings · last 24 hours", spark: spark(sparks.locations, "#41b0cc"), span: "secondary" })}
+      ${metric({ label: "Shipments processed", value: formatNum(recentTotal), note: `${formatNum(network.recent.delivered)} delivered · 24h`, spark: spark(sparks.recent, "#8ed1c4"), span: "secondary" })}
+    </section>
+    <div class="split">
+      <section class="panel">
+        <div class="panel-head"><h2>Status mix</h2><span>% of shipments</span></div>
+        ${statusBars()}
+      </section>
+      <section class="panel">
+        <div class="panel-head"><h2>Status distribution</h2><span>By milestone</span></div>
+        ${orbitChart()}
+      </section>
+    </div>
+    <section class="panel summary-panel">
+      <div class="panel-head"><h2>Daily performance</h2><span>Last 24 hours</span></div>
+      ${summaryMeters()}
+    </section>
+    <div class="lower">
+      <section class="panel signal-live" style="position:relative">
+        <div class="panel-head"><h2>Milestone trend</h2><span>Last 24 hours · GST</span></div>
+        ${signalChart()}
+        <div class="tip" id="chart-tip" hidden></div>
+      </section>
+      <section class="panel">
+        <div class="panel-head"><h2>Tracking events</h2><span>Event log</span></div>
+        <div class="ledger">${ledger()}</div>
+      </section>
+    </div>`;
+}
+
+function finishOverview() {
+  requestAnimationFrame(() => {
+    stage.querySelectorAll("[data-width]").forEach((bar) => {
+      bar.style.width = `${bar.dataset.width}%`;
+    });
+  });
+  bindSignal();
+  animateCounts(stage);
+}
+
+function animateCounts(root) {
+  root.querySelectorAll("[data-count]").forEach((el) => {
+    if (el.dataset.ran === "1") return;
+    el.dataset.ran = "1";
+    const target = Number(el.dataset.count);
+    const suffix = el.dataset.suffix || "";
+    const decimals = String(el.dataset.count).includes(".") ? 1 : 0;
+    const started = performance.now();
+    const step = (now) => {
+      const progress = Math.min(1, (now - started) / 850);
+      const eased = 1 - (1 - progress) ** 3;
+      const value = target * eased;
+      const shown = decimals ? value.toFixed(decimals) : Math.round(value).toLocaleString("en-US");
+      el.textContent = `${shown}${suffix}`;
+      if (progress < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  });
+}
+
 function renderDashboard() {
   stage.innerHTML = `<section class="view">
-    ${head("Control tower", "Network overview", "Shipment volume, customer response, and exception rate for the Jebel Ali origin hub.")}
-    ${renderTower(state.tower)}
+    ${head("Control tower", "Network overview", "Shipment volume, delivery completion, and exception rate for the Jebel Ali origin hub.")}
+    ${renderTower(state.tower, state.tower === "overview" ? overviewMarkup() : "")}
     <footer class="foot"><span>SULOai control tower · Jebel Ali origin hub</span><span>Dubai · GST</span></footer>
   </section>`;
   bindTower();
+  if (state.tower === "overview") finishOverview();
 }
 
 function bindTower() {
+  const open = (tab) => {
+    state.tower = tab;
+    const host = stage.querySelector("#tower");
+    if (host) host.outerHTML = renderTower(state.tower, state.tower === "overview" ? overviewMarkup() : "");
+    bindTower();
+    if (state.tower === "overview") finishOverview();
+    else animateCounts(stage);
+  };
   stage.querySelectorAll("[data-tower]").forEach((button) => {
-    button.addEventListener("click", () => {
-      state.tower = button.dataset.tower;
-      const host = stage.querySelector("#tower");
-      if (host) host.outerHTML = renderTower(state.tower);
-      bindTower();
-    });
+    button.addEventListener("click", () => open(button.dataset.tower));
   });
   stage.querySelectorAll("[data-jump]").forEach((button) => {
-    button.addEventListener("click", () => {
-      state.tower = button.dataset.jump;
-      const host = stage.querySelector("#tower");
-      if (host) host.outerHTML = renderTower(state.tower);
-      bindTower();
-    });
+    button.addEventListener("click", () => open(button.dataset.jump));
   });
 }
 
@@ -373,12 +436,12 @@ function timeline(item) {
     : item.status === "rescheduled"
       ? [["Shipment created", "done"], ["Assigned to route", "done"], ["Rescheduled", "now"]]
       : item.status === "delivered"
-        ? [["Shipment created", "done"], ["Assigned to route", "done"], ["Out for delivery", "done"], ["Proof of delivery", "done"]]
+        ? [["Shipment created", "done"], ["Assigned to route", "done"], ["Out for delivery", "done"], ["Delivered", "done"], ["Proof of delivery", "done"]]
         : item.status === "in_progress"
-          ? [["Shipment created", "done"], ["Assigned to route", "done"], ["Out for delivery", "now"], ["Proof of delivery", ""]]
+          ? [["Shipment created", "done"], ["Assigned to route", "done"], ["Out for delivery", "now"], ["Delivered", ""], ["Proof of delivery", ""]]
           : item.assigned
-            ? [["Shipment created", "done"], ["Assigned to route", "now"], ["Out for delivery", ""], ["Proof of delivery", ""]]
-            : [["Shipment created", "now"], ["Assigned to route", ""], ["Out for delivery", ""], ["Proof of delivery", ""]];
+            ? [["Shipment created", "done"], ["Assigned to route", "now"], ["Out for delivery", ""], ["Delivered", ""], ["Proof of delivery", ""]]
+            : [["Shipment created", "now"], ["Assigned to route", ""], ["Out for delivery", ""], ["Delivered", ""], ["Proof of delivery", ""]];
   return `<ol class="timeline">${steps.map(([label, tone]) => `<li class="${tone}">${label}</li>`).join("")}</ol>`;
 }
 
@@ -528,16 +591,6 @@ function initMap(rows) {
   requestAnimationFrame(() => opsMap?.invalidateSize());
 }
 
-function renderRail() {
-  const host = document.querySelector("#rail-live");
-  if (!host) return;
-  const moving = shipments.filter((item) => item.status === "in_progress");
-  host.innerHTML = `<div class="rail-label">Out for delivery</div>${moving.map((item) => `<a class="run ${item.id === state.selected && state.view === "tracking" ? "is-on" : ""}" href="#tracking" data-open="${esc(item.id)}">
-      <i></i>
-      <span><b>${esc(item.customer)}</b><small>${esc(item.district)}</small></span>
-    </a>`).join("")}`;
-}
-
 function renderTracking() {
   const rows = filteredShipments();
   if (rows.length && !rows.some((item) => item.id === state.selected)) state.selected = rows[0].id;
@@ -676,7 +729,6 @@ function render() {
   document.title = state.view === "tracking" ? "Shipment tracking · SULOai" : "Control tower · SULOai";
   if (state.view === "tracking") renderTracking();
   else renderDashboard();
-  renderRail();
   placeGlider();
   if (state.view === "tracking") initMap(filteredShipments());
 }
@@ -714,16 +766,44 @@ function liveTick() {
 function boot() {
   if (!location.hash) history.replaceState(null, "", "#dashboard");
   state.view = viewFromHash();
-  document.querySelector("#rail-live")?.addEventListener("click", (event) => {
-    const link = event.target.closest("[data-open]");
-    if (!link) return;
-    state.selected = link.dataset.open;
-    state.filter = "all";
-    state.query = "";
-    if (location.hash === "#tracking") {
-      event.preventDefault();
-      render();
+  const bot = document.querySelector("#ai-bot");
+  const panel = document.querySelector("#ai-panel");
+  const log = document.querySelector("#ai-log");
+  const form = document.querySelector("#ai-form");
+  const input = document.querySelector("#ai-input");
+  function reply(text) {
+    const ask = input.value.trim();
+    if (!ask) return;
+    input.value = "";
+    log.insertAdjacentHTML("beforeend", `<p class="ai-ask">${esc(ask)}</p><p class="ai-answer">${esc(text)}</p>`);
+    log.scrollTop = log.scrollHeight;
+  }
+  function answer(ask) {
+    const q = ask.toLowerCase();
+    const moving = shipments.filter((item) => item.status === "in_progress").length;
+    if (q.includes("out for") || q.includes("transit") || q.includes("route")) {
+      return `${moving} shipments are out for delivery from Jebel Ali. Open Shipment tracking to see the live map.`;
     }
+    if (q.includes("pod") || q.includes("proof") || q.includes("deliver")) {
+      return "Delivery completion is 84.3%. Proof of delivery is the last milestone after the shipment is marked delivered.";
+    }
+    if (q.includes("delay") || q.includes("exception") || q.includes("risk")) {
+      return "Open exceptions are reschedules, cancellations, and orders awaiting customer confirmation. Filter the shipment register for those milestones.";
+    }
+    return "I can brief out-for-delivery volume, proof of delivery, or current exceptions. Ask about a milestone or the Jebel Ali hub.";
+  }
+  bot?.addEventListener("click", () => {
+    const open = panel.hasAttribute("hidden");
+    panel.toggleAttribute("hidden", !open);
+    bot.setAttribute("aria-expanded", open ? "true" : "false");
+    if (open) input.focus();
+  });
+  form?.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const ask = input.value.trim();
+    if (!ask) return;
+    const text = answer(ask);
+    reply(text);
   });
   render();
   window.addEventListener("hashchange", () => {

@@ -61,15 +61,6 @@ const roster = [
   ["Rana Khalil", "DRV-16", "Off duty", "DXB 36014", 0, "90%"],
 ];
 
-const responses = [
-  ["Al Futtaim Retail", "PO-88421", "Confirmed", "25 Oct, 09:12", "Out for delivery"],
-  ["Emaar Hospitality", "PO-88390", "Confirmed", "25 Oct, 08:40", "Assigned to route"],
-  ["Jumeirah Group", "PO-88311", "Rescheduled", "24 Oct, 16:05", "Rescheduled"],
-  ["Nakheel Residences", "PO-88277", "Confirmed", "24 Oct, 11:22", "Delivered"],
-  ["Wasl Asset Mgmt", "PO-88201", "Cancelled", "23 Oct, 14:18", "Cancelled"],
-  ["Meraas", "PO-88144", "Confirmed", "23 Oct, 10:02", "Delivered"],
-];
-
 const tabs = [
   ["overview", "Overview"],
   ["deliveries", "Deliveries"],
@@ -101,75 +92,15 @@ function bars(rows, key, max) {
 }
 
 function kpi(label, value, note, tone) {
+  const raw = String(value).replace(/,/g, "");
+  const count = /^-?\d+(\.\d+)?%?$/.test(raw) ? raw.replace("%", "") : "";
+  const suffix = String(value).includes("%") ? "%" : "";
+  const long = String(value).length > 14 ? " long" : "";
   return `<article class="kpi">
     <span>${esc(label)}</span>
-    <strong class="${tone || ""}">${esc(value)}</strong>
+    <strong class="${tone || ""}${long}"${count ? ` data-count="${count}" data-suffix="${suffix}"` : ""}>${esc(value)}</strong>
     <small>${esc(note)}</small>
   </article>`;
-}
-
-function overview() {
-  const pod = ((book.withPod / book.delivered) * 100).toFixed(1);
-  const days = ["12 Oct", "14 Oct", "16 Oct", "18 Oct", "20 Oct", "22 Oct", "24 Oct"];
-  const totals = [86, 94, 78, 110, 102, 121, 98];
-  const delivered = [71, 80, 62, 96, 88, 104, 84];
-  const max = Math.max(...totals);
-  const cols = days.map((day, i) => {
-    const t = (totals[i] / max) * 100;
-    const d = (delivered[i] / max) * 100;
-    return `<div class="trend-col" title="${day}: ${totals[i]} dispatched, ${delivered[i]} delivered">
-      <div class="trend-bars"><i style="height:${t}%"></i><b style="height:${d}%"></b></div>
-      <span>${day.split(" ")[0]}</span>
-    </div>`;
-  }).join("");
-  const rows = responses.map((row) => `<tr>
-    <td>${esc(row[0])}</td><td class="mono">${esc(row[1])}</td>
-    <td><span class="status ${row[2] === "Confirmed" ? "delivered" : row[2] === "Rescheduled" ? "rescheduled" : "cancelled"}"><i></i>${esc(row[2])}</span></td>
-    <td>${esc(row[3])}</td><td>${esc(row[4])}</td>
-  </tr>`).join("");
-  return `<div class="kpi-strip">
-    ${kpi("Total deliveries", n(book.total), `+${book.delta}% vs yesterday`, "")}
-    ${kpi("Delivered", n(book.delivered), `${book.deliveredToday} today`, "tone-mint")}
-    ${kpi("Next shipment", String(book.nextShipment), "Confirmed for tomorrow", "tone-amber")}
-    ${kpi("Future shipment", String(book.futureShipment), "Confirmed 2+ days out", "tone-gold")}
-    ${kpi("Pending orders", n(book.pending), "Open, not yet delivered", "tone-amber")}
-    ${kpi("Cancelled", n(book.cancelled), "Customer or ops cancel", "tone-coral")}
-    ${kpi("Success rate", `${book.success}%`, "Delivered ÷ total orders", "tone-mint")}
-  </div>
-  <div class="split">
-    <section class="panel">
-      <div class="panel-head"><h2>Delivery trend</h2><span>Dispatched vs delivered</span></div>
-      <div class="trend">${cols}</div>
-      <p class="quiet">Bars: dispatched. Solid: delivered. Success rate uses the same ratio as the portal.</p>
-    </section>
-    <section class="panel">
-      <div class="panel-head"><h2>Needs attention</h2><span>Open exceptions</span></div>
-      <div class="attention">
-        <button type="button" data-jump="deliveries"><b>${book.overdue}</b><span>Pending orders</span></button>
-        <button type="button" data-jump="deliveries"><b>${book.unassigned}</b><span>Unassigned</span></button>
-        <button type="button" data-jump="deliveries"><b>${book.awaiting}</b><span>Awaiting confirmation</span></button>
-      </div>
-      <div class="panel-head" style="margin-top:16px"><h2>Customer response</h2></div>
-      <div class="attention">
-        <div><b class="tone-mint">${n(book.accepted)}</b><span>Accepted</span></div>
-        <div><b class="tone-amber">${book.rescheduled}</b><span>Rescheduled</span></div>
-        <div><b class="tone-coral">${book.custCancelled}</b><span>Cancelled</span></div>
-      </div>
-      <div class="panel-head" style="margin-top:16px"><h2>Proof of delivery</h2></div>
-      <p class="metric-value tone-mint" style="font-size:36px">${n(book.withPod)}</p>
-      <p class="quiet">with POD · coverage ${pod}% · without POD ${n(book.delivered - book.withPod)}</p>
-      <div class="track"><i class="fill-mint" style="width:${pod}%"></i></div>
-    </section>
-  </div>
-  <section class="panel table-panel">
-    <div class="panel-head"><h2>Customer response detail</h2><span>${responses.length} responses</span></div>
-    <div class="table-scroll">
-      <table>
-        <thead><tr><th>Customer</th><th>Delivery no.</th><th>Response</th><th>Confirmed on</th><th>Status</th></tr></thead>
-        <tbody>${rows}</tbody>
-      </table>
-    </div>
-  </section>`;
 }
 
 function deliveries() {
@@ -217,31 +148,27 @@ function trends() {
       <button class="chip" type="button">This year</button>
     </div>
   </section>
-  <div class="split">
-    <section class="panel"><div class="panel-head"><h2>Delivery demand</h2><span>Orders created</span></div><div class="trend">${cols}</div></section>
-    <section class="panel">
-      <div class="panel-head"><h2>Fulfillment</h2><span>Created vs delivered vs open vs cancelled</span></div>
-      ${bars([
-        { name: "Created", count: 244 },
-        { name: "Delivered", count: 198 },
-        { name: "Pending", count: 32 },
-        { name: "Cancelled", count: 14 },
-      ], "count", 244)}
-      <div class="panel-head" style="margin-top:14px"><h2>Success rate</h2><span>Target 95%</span></div>
-      <p class="metric-value tone-mint" style="font-size:40px">${book.success}%</p>
-      <p class="quiet">Delivered ÷ total orders. Lead time median 18h · P90 41h.</p>
-    </section>
+  <section class="panel">
+    <div class="panel-head"><h2>Delivery demand</h2><span>Orders created</span></div>
+    <div class="trend">${cols}</div>
+  </section>
+  <div class="kpi-strip" style="margin-top:16px">
+    ${kpi("Success rate", `${book.success}%`, "Target 95%", "tone-mint")}
+    ${kpi("Open backlog", n(book.pending), "Inside the promise", "tone-amber")}
+    ${kpi("Median lead time", "18h", "Created to delivered", "tone-gold")}
+    ${kpi("P90 lead time", "41h", "Slowest tenth", "tone-coral")}
+    ${kpi("Created", "244", "This month", "")}
+    ${kpi("Delivered", "198", "This month", "tone-mint")}
+    ${kpi("Cancelled", "14", "This month", "tone-coral")}
   </div>
-  <div class="split">
-    <section class="panel"><div class="panel-head"><h2>Backlog</h2><span>Open orders</span></div><p class="metric-value tone-amber" style="font-size:40px">${n(book.pending)}</p><p class="quiet">Pending orders still inside the delivery promise.</p></section>
-    <section class="panel"><div class="panel-head"><h2>Status mix</h2><span>Delivered vs pending vs cancelled</span></div>
-      ${bars([
-        { name: "Delivered", count: book.delivered },
-        { name: "Pending", count: book.pending },
-        { name: "Cancelled", count: book.cancelled },
-      ], "count", book.total)}
-    </section>
-  </div>`;
+  <section class="panel">
+    <div class="panel-head"><h2>Status mix</h2><span>Delivered vs pending vs cancelled</span></div>
+    ${bars([
+      { name: "Delivered", count: book.delivered },
+      { name: "Pending", count: book.pending },
+      { name: "Cancelled", count: book.cancelled },
+    ], "count", book.total)}
+  </section>`;
 }
 
 function customerRows() {
@@ -337,7 +264,6 @@ function driversPanel() {
 }
 
 const views = {
-  overview,
   deliveries,
   trends,
   customers: customersPanel,
@@ -346,7 +272,8 @@ const views = {
   drivers: driversPanel,
 };
 
-export function renderTower(tab) {
+export function renderTower(tab, overviewHtml) {
   const nav = tabs.map(([id, label]) => `<button type="button" class="tower-tab ${tab === id ? "on" : ""}" data-tower="${id}">${label}</button>`).join("");
-  return `<div id="tower"><nav class="tower-tabs" aria-label="Dashboard sections">${nav}</nav><div id="tower-body">${(views[tab] || overview)()}</div></div>`;
+  const body = tab === "overview" && overviewHtml ? overviewHtml : (views[tab] || views.deliveries)();
+  return `<div id="tower"><nav class="tower-tabs" aria-label="Dashboard sections">${nav}</nav><div id="tower-body">${body}</div></div>`;
 }
